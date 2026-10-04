@@ -144,7 +144,7 @@
     .pill-mid { color: #c084fc; border-color: rgba(192, 132, 252, 0.4); }
     .pill-high { color: var(--gold); border-color: rgba(245, 158, 11, 0.5); }
 
-    /* Arena / Canvas Area compatto e dinamico */
+    /* Arena / Canvas Area dinamico */
     .arena-card {
       position: relative;
       flex: 1 1 0;
@@ -423,7 +423,6 @@
     let wonAmount = 0;
 
     const canvas = document.getElementById('gameCanvas');
-    const arenaCard = document.getElementById('arenaCard');
     const ctx = canvas.getContext('2d');
     const balanceDisplay = document.getElementById('balanceDisplay');
     const multiplierText = document.getElementById('multiplierText');
@@ -436,12 +435,13 @@
     let particles = [];
 
     function resizeCanvas() {
-      const rect = arenaCard.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
-      canvas.width = rect.width * window.devicePixelRatio;
-      canvas.height = rect.height * window.devicePixelRatio;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
       ctx.resetTransform();
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.scale(dpr, dpr);
       drawScene(0);
     }
     window.addEventListener('resize', resizeCanvas);
@@ -533,6 +533,9 @@
 
       betInput.disabled = true;
 
+      // Pulisce subito il canvas per la nuova partita
+      drawScene(0);
+
       let countdown = 3;
       statusText.className = "status-text";
       statusText.textContent = `In decollo... ${countdown}`;
@@ -605,6 +608,7 @@
           statusText.className = "status-text";
           statusText.textContent = "Pronto al decollo";
           updateActionBtnSubtitle();
+          drawScene(0); // Ripulisce il tracciato rosso
         }
       }, 1400);
     }
@@ -642,8 +646,9 @@
     }
 
     function createExplosion() {
-      const w = arenaCard.clientWidth;
-      const h = arenaCard.clientHeight;
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
       
       const x = Math.min(w * 0.85, 30 + Math.min(1, currentMultiplier / 8) * (w - 70));
       const y = Math.max(30, (h - 30) - Math.min(1, Math.log10(currentMultiplier + 1)) * (h - 60));
@@ -665,11 +670,16 @@
     }
 
     function drawScene(elapsed) {
-      const w = arenaCard.clientWidth;
-      const h = arenaCard.clientHeight;
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
       if (!w || !h) return;
 
-      ctx.clearRect(0, 0, w, h);
+      // Pulizia totale e garantita al 100% dell'intero buffer bitmap
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
 
       // Griglia leggera
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
@@ -746,14 +756,14 @@
         }
       }
 
-      // Particelle
+      // Particelle con rimozione se escono dai bordi
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
         p.life -= p.decay;
 
-        if (p.life <= 0) {
+        if (p.life <= 0 || p.x < 0 || p.x > w || p.y < 0 || p.y > h) {
           particles.splice(i, 1);
           continue;
         }
