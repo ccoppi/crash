@@ -1,0 +1,803 @@
+!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crash Game - Aviator Edition</title>
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-card: #151d30;
+      --bg-input: #1e293b;
+      --accent: #e11d48;
+      --accent-glow: rgba(225, 29, 72, 0.4);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.4);
+      --gold: #f59e0b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Header Bar */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #fff;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .balance-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-input);
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .balance-val {
+      color: var(--green);
+      font-family: monospace;
+      font-size: 1.2rem;
+    }
+
+    .btn-reload {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .btn-reload:hover {
+      background: var(--border);
+      color: #fff;
+    }
+
+    /* History Pills */
+    .history-bar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 8px 0;
+      scrollbar-width: none;
+    }
+
+    .history-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .history-pill {
+      flex-shrink: 0;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: monospace;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      animation: popIn 0.3s ease;
+    }
+
+    .pill-low { color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
+    .pill-mid { color: #c084fc; border-color: rgba(192, 132, 252, 0.4); }
+    .pill-high { color: var(--gold); border-color: rgba(245, 158, 11, 0.5); }
+
+    /* Arena / Canvas Area */
+    .arena-card {
+      position: relative;
+      background: radial-gradient(circle at bottom left, #1e1b4b 0%, #0f172a 70%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 340px;
+    }
+
+    /* Overlay Multiplier display */
+    .multiplier-display {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .multiplier-value {
+      font-size: 4.5rem;
+      font-weight: 900;
+      font-family: monospace;
+      letter-spacing: -2px;
+      color: #fff;
+      text-shadow: 0 0 30px rgba(255,255,255,0.3);
+      transition: color 0.2s;
+    }
+
+    .multiplier-value.crashed {
+      color: var(--accent);
+      text-shadow: 0 0 40px var(--accent-glow);
+      animation: shake 0.4s ease;
+    }
+
+    .status-text {
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      margin-top: -6px;
+    }
+
+    .status-text.crashed {
+      color: var(--accent);
+    }
+
+    .status-text.won {
+      color: var(--green);
+    }
+
+    /* Control Panel */
+    .control-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .control-card {
+        grid-template-columns: 1fr;
+      }
+      .multiplier-value {
+        font-size: 3.5rem;
+      }
+    }
+
+    .bet-config {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-number {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: #fff;
+      font-size: 1.1rem;
+      font-family: monospace;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .input-number:focus {
+      border-color: #38bdf8;
+    }
+
+    .quick-bets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .quick-btn {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 0;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .quick-btn:hover {
+      background: var(--border);
+      border-color: #475569;
+    }
+
+    /* Big Action Button */
+    .action-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .big-btn {
+      width: 100%;
+      height: 100%;
+      min-height: 80px;
+      border-radius: 12px;
+      border: none;
+      font-size: 1.4rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .big-btn:active {
+      transform: scale(0.98);
+    }
+
+    .big-btn-launch {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+    }
+
+    .big-btn-launch:hover {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+    }
+
+    .big-btn-cashout {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      box-shadow: 0 4px 25px var(--green-glow);
+      animation: pulse 1s infinite alternate;
+    }
+
+    .big-btn-cashout:hover {
+      background: linear-gradient(135deg, #34d399, #10b981);
+    }
+
+    .big-btn-disabled {
+      background: #334155;
+      color: #64748b;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-subtitle {
+      font-size: 0.95rem;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    /* Keyframe Animations */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.02); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translate(0, 0); }
+      20%, 60% { transform: translate(-6px, 3px); }
+      40%, 80% { transform: translate(6px, -3px); }
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Top Header -->
+    <header>
+      <div class="logo">
+        🚀 <span>CRASH</span> GAME
+      </div>
+      <div class="balance-box">
+        <span>Credito:</span>
+        <span class="balance-val" id="balanceDisplay">1000</span>
+        <button class="btn-reload" id="btnReload" title="Aggiungi 500 crediti">+500</button>
+      </div>
+    </header>
+
+    <!-- Round History -->
+    <div class="history-bar" id="historyBar">
+      <div class="history-pill pill-low">1.34x</div>
+      <div class="history-pill pill-mid">2.45x</div>
+      <div class="history-pill pill-high">11.20x</div>
+      <div class="history-pill pill-low">1.02x</div>
+      <div class="history-pill pill-mid">3.80x</div>
+    </div>
+
+    <!-- Canvas Graphic Arena -->
+    <div class="arena-card">
+      <canvas id="gameCanvas"></canvas>
+      <div class="multiplier-display">
+        <div class="multiplier-value" id="multiplierText">1.00x</div>
+        <div class="status-text" id="statusText">Pronto al decollo</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="control-card">
+      <div class="bet-config">
+        <label class="label" for="betInput">Puntata</label>
+        <div class="input-row">
+          <input type="number" id="betInput" class="input-number" value="20" min="1" step="1">
+        </div>
+        <div class="quick-bets">
+          <button class="quick-btn" onclick="setBetFraction(0.5)">½</button>
+          <button class="quick-btn" onclick="setBetFraction(2)">2×</button>
+          <button class="quick-btn" onclick="setFixedBet(50)">50</button>
+          <button class="quick-btn" onclick="setMaxBet()">MAX</button>
+        </div>
+      </div>
+
+      <div class="action-panel">
+        <button class="big-btn big-btn-launch" id="actionBtn">
+          <span>DECOLLA</span>
+          <span class="btn-subtitle">Punta 20</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- GESTIONE STATO & CREDITO ---
+    const STORAGE_KEY = 'casino_balance';
+    let balance = parseInt(localStorage.getItem(STORAGE_KEY)) || 1000;
+    let currentBet = 20;
+
+    // Stati di gioco: 'IDLE' | 'STARTING' | 'FLYING' | 'CRASHED'
+    let gameState = 'IDLE';
+    let currentMultiplier = 1.00;
+    let crashPoint = 1.00;
+    let startTime = null;
+    let animFrameId = null;
+    let hasCashedOut = false;
+    let wonAmount = 0;
+
+    // Riferimenti DOM
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const balanceDisplay = document.getElementById('balanceDisplay');
+    const multiplierText = document.getElementById('multiplierText');
+    const statusText = document.getElementById('statusText');
+    const actionBtn = document.getElementById('actionBtn');
+    const betInput = document.getElementById('betInput');
+    const btnReload = document.getElementById('btnReload');
+    const historyBar = document.getElementById('historyBar');
+
+    // Particelle per l'esplosione
+    let particles = [];
+
+    // Ridimensionamento responsive Canvas
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function updateBalanceUI() {
+      balanceDisplay.textContent = balance;
+      localStorage.setItem(STORAGE_KEY, balance);
+      updateActionBtnSubtitle();
+    }
+
+    function updateActionBtnSubtitle() {
+      if (gameState === 'IDLE') {
+        const val = parseInt(betInput.value) || 0;
+        actionBtn.innerHTML = `<span>DECOLLA</span><span class="btn-subtitle">Punta ${val}</span>`;
+      }
+    }
+
+    // --- FORMULA RNG PROBABILISTICA (House Edge ~4%) ---
+    function calculateCrashPoint() {
+      const houseEdge = 0.04; // 4% margine del banco
+      const r = Math.random();
+      // Probabilità di crash immediato
+      if (r < houseEdge) return 1.00;
+      
+      const result = (1 - houseEdge) / (1 - r);
+      // Arrotonda a due cifre decimali
+      return Math.max(1.00, Math.floor(result * 100) / 100);
+    }
+
+    // --- CONTROLLI PUNTATA ---
+    betInput.addEventListener('input', () => {
+      let val = parseInt(betInput.value) || 1;
+      if (val < 1) val = 1;
+      if (val > balance) val = Math.max(1, balance);
+      betInput.value = val;
+      updateActionBtnSubtitle();
+    });
+
+    function setBetFraction(multiplier) {
+      if (gameState !== 'IDLE') return;
+      let val = Math.floor((parseInt(betInput.value) || 10) * multiplier);
+      val = Math.max(1, Math.min(val, balance));
+      betInput.value = val;
+      updateActionBtnSubtitle();
+    }
+
+    function setFixedBet(amount) {
+      if (gameState !== 'IDLE') return;
+      betInput.value = Math.min(amount, balance);
+      updateActionBtnSubtitle();
+    }
+
+    function setMaxBet() {
+      if (gameState !== 'IDLE') return;
+      betInput.value = Math.max(1, balance);
+      updateActionBtnSubtitle();
+    }
+
+    btnReload.addEventListener('click', () => {
+      balance += 500;
+      updateBalanceUI();
+    });
+
+    // --- LOGICA DEL ROUND ---
+    actionBtn.addEventListener('click', () => {
+      if (gameState === 'IDLE') {
+        startRound();
+      } else if (gameState === 'FLYING' && !hasCashedOut) {
+        cashOut();
+      }
+    });
+
+    // Supporto per Barra Spaziatrice da tastiera
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        actionBtn.click();
+      }
+    });
+
+    function startRound() {
+      currentBet = parseInt(betInput.value) || 10;
+      if (currentBet > balance) {
+        alert("Credito insufficiente per questa puntata!");
+        return;
+      }
+
+      // Detrae la puntata
+      balance -= currentBet;
+      updateBalanceUI();
+
+      // Setup round
+      crashPoint = calculateCrashPoint();
+      currentMultiplier = 1.00;
+      hasCashedOut = false;
+      particles = [];
+      gameState = 'STARTING';
+
+      // Disabilita input puntata
+      betInput.disabled = true;
+
+      // Breve conto alla rovescia (1.2s)
+      let countdown = 3;
+      statusText.className = "status-text";
+      statusText.textContent = `In decollo... ${countdown}`;
+      actionBtn.className = "big-btn big-btn-disabled";
+      actionBtn.innerHTML = `<span>ATTENDI...</span>`;
+
+      const countInterval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          statusText.textContent = `In decollo... ${countdown}`;
+        } else {
+          clearInterval(countInterval);
+          launchFlight();
+        }
+      }, 400);
+    }
+
+    function launchFlight() {
+      gameState = 'FLYING';
+      startTime = performance.now();
+      statusText.textContent = "VOLO IN CORSO";
+      multiplierText.className = "multiplier-value";
+
+      // Pulsante Incassa
+      actionBtn.className = "big-btn big-btn-cashout";
+      updateCashoutButton();
+
+      animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function cashOut() {
+      hasCashedOut = true;
+      wonAmount = Math.floor(currentBet * currentMultiplier);
+      balance += wonAmount;
+      updateBalanceUI();
+
+      statusText.className = "status-text won";
+      statusText.textContent = `INCASSATO A ${currentMultiplier.toFixed(2)}x (+${wonAmount})`;
+
+      // Il pulsante diventa inattivo ma il razzo vola fino allo schianto effettivo
+      actionBtn.className = "big-btn big-btn-disabled";
+      actionBtn.innerHTML = `<span>INCASSATO!</span><span class="btn-subtitle">+${wonAmount} crediti</span>`;
+    }
+
+    function updateCashoutButton() {
+      if (gameState === 'FLYING' && !hasCashedOut) {
+        const potential = Math.floor(currentBet * currentMultiplier);
+        actionBtn.innerHTML = `<span>INCASSA</span><span class="btn-subtitle">${potential} crediti</span>`;
+      }
+    }
+
+    function crash() {
+      gameState = 'CRASHED';
+      multiplierText.className = "multiplier-value crashed";
+      multiplierText.textContent = `${crashPoint.toFixed(2)}x`;
+
+      if (!hasCashedOut) {
+        statusText.className = "status-text crashed";
+        statusText.textContent = `CRASH! HAI PERSO ${currentBet}`;
+      }
+
+      // Crea particelle di esplosione
+      createExplosion();
+
+      // Aggiungi a cronologia
+      addHistoryPill(crashPoint);
+
+      // Reset bottone
+      actionBtn.className = "big-btn big-btn-launch";
+      actionBtn.innerHTML = `<span>RIGIOCA</span><span class="btn-subtitle">Nuova puntata</span>`;
+      betInput.disabled = false;
+
+      setTimeout(() => {
+        if (gameState === 'CRASHED') {
+          gameState = 'IDLE';
+          statusText.className = "status-text";
+          statusText.textContent = "Pronto al decollo";
+          updateActionBtnSubtitle();
+        }
+      }, 1500);
+    }
+
+    function addHistoryPill(multiplier) {
+      const pill = document.createElement('div');
+      pill.className = 'history-pill ' + (multiplier >= 10 ? 'pill-high' : multiplier >= 2 ? 'pill-mid' : 'pill-low');
+      pill.textContent = `${multiplier.toFixed(2)}x`;
+      historyBar.insertBefore(pill, historyBar.firstChild);
+      if (historyBar.children.length > 12) {
+        historyBar.removeChild(historyBar.lastChild);
+      }
+    }
+
+    // --- GAME LOOP & GRAFICA CANVAS ---
+    function gameLoop(timestamp) {
+      const elapsed = (timestamp - startTime) / 1000; // Secondi trascorsi
+
+      if (gameState === 'FLYING') {
+        // Crescita esponenziale realistica: mult = e^(0.06 * t^1.2)
+        currentMultiplier = Math.pow(Math.E, 0.07 * Math.pow(elapsed, 1.25));
+        
+        if (currentMultiplier >= crashPoint) {
+          currentMultiplier = crashPoint;
+          crash();
+        } else {
+          multiplierText.textContent = `${currentMultiplier.toFixed(2)}x`;
+          updateCashoutButton();
+        }
+      }
+
+      drawScene(elapsed);
+
+      if (gameState === 'FLYING' || particles.length > 0) {
+        animFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function createExplosion() {
+      const w = canvas.getBoundingClientRect().width;
+      const h = canvas.getBoundingClientRect().height;
+      
+      // Coordinate approssimative della punta della traiettoria
+      const x = Math.min(w * 0.85, 40 + Math.min(1, currentMultiplier / 8) * (w - 100));
+      const y = Math.max(40, (h - 40) - Math.min(1, Math.log10(currentMultiplier + 1)) * (h - 80));
+
+      for (let i = 0; i < 45; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 6;
+        particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1.0,
+          decay: 0.02 + Math.random() * 0.03,
+          color: ['#ef4444', '#f97316', '#eab308', '#ffffff'][Math.floor(Math.random() * 4)],
+          size: 2 + Math.random() * 4
+        });
+      }
+    }
+
+    function drawScene(elapsed) {
+      const w = canvas.getBoundingClientRect().width;
+      const h = canvas.getBoundingClientRect().height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Griglia di sfondo elegante
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      const startX = 30;
+      const startY = h - 30;
+
+      if (gameState === 'FLYING' || gameState === 'CRASHED') {
+        // Calcolo posizione attuale della testa
+        const progress = Math.min(1, (currentMultiplier - 1) / 7);
+        const endX = startX + progress * (w - 90);
+        const endY = startY - Math.min(1, Math.pow(progress, 0.85)) * (h - 70);
+
+        // Control point per curva di Bezier
+        const cpX = startX + (endX - startX) * 0.7;
+        const cpY = startY;
+
+        // Area sfumata sotto la curva
+        const grad = ctx.createLinearGradient(0, endY, 0, startY);
+        if (gameState === 'CRASHED') {
+          grad.addColorStop(0, 'rgba(225, 29, 72, 0.25)');
+          grad.addColorStop(1, 'rgba(225, 29, 72, 0.0)');
+        } else {
+          grad.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+          grad.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+        }
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+        ctx.lineTo(endX, startY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Linea curva principale
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = gameState === 'CRASHED' ? '#ef4444' : '#10b981';
+        ctx.stroke();
+
+        // Razzo / Punto di testa se non è crashato
+        if (gameState === 'FLYING') {
+          ctx.save();
+          ctx.translate(endX, endY);
+          // Calcola l'inclinazione tangente
+          const angle = Math.atan2(endY - cpY, endX - cpX) * 0.5 - 0.2;
+          ctx.rotate(angle);
+
+          // Disegna piccolo razzo stilizzato
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(0, 0, 7, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Alone luminoso
+          ctx.shadowColor = '#10b981';
+          ctx.shadowBlur = 15;
+          ctx.fillStyle = '#34d399';
+          ctx.beginPath();
+          ctx.arc(0, 0, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // Disegna particelle esplosione
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= p.decay;
+
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    // Inizializzazione iniziale UI
+    updateBalanceUI();
+    drawScene(0);
+  </script>
+</body>
+</html>
