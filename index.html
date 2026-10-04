@@ -1,8 +1,7 @@
-!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Crash Game - Aviator Edition</title>
   <style>
     :root {
@@ -25,43 +24,53 @@
       padding: 0;
       user-select: none;
       -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: var(--bg-main);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg-main);
-      color: var(--text);
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      padding: 16px;
+      padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
     }
 
     .container {
       width: 100%;
-      max-width: 800px;
+      max-width: 650px;
+      height: 100%;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 8px;
     }
 
-    /* Header Bar */
+    /* Header Bar: Titolo in alto, credito SOTTO */
     header {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
+      justify-content: center;
+      gap: 5px;
       background: var(--bg-card);
-      padding: 12px 20px;
-      border-radius: 12px;
+      padding: 6px 12px;
+      border-radius: 10px;
       border: 1px solid var(--border);
+      flex-shrink: 0;
     }
 
     .logo {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 1.25rem;
+      gap: 6px;
+      font-size: 1.05rem;
       font-weight: 800;
       letter-spacing: 1px;
       color: #fff;
@@ -74,19 +83,19 @@
     .balance-box {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       background: var(--bg-input);
-      padding: 8px 16px;
-      border-radius: 8px;
+      padding: 3px 12px;
+      border-radius: 20px;
       border: 1px solid var(--border);
       font-weight: 700;
-      font-size: 1.05rem;
+      font-size: 0.85rem;
     }
 
     .balance-val {
       color: var(--green);
       font-family: monospace;
-      font-size: 1.2rem;
+      font-size: 1.05rem;
     }
 
     .btn-reload {
@@ -95,12 +104,12 @@
       color: var(--text-muted);
       cursor: pointer;
       border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 0.8rem;
+      padding: 2px 6px;
+      font-size: 0.75rem;
       transition: all 0.2s;
     }
 
-    .btn-reload:hover {
+    .btn-reload:active {
       background: var(--border);
       color: #fff;
     }
@@ -108,10 +117,11 @@
     /* History Pills */
     .history-bar {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       overflow-x: auto;
-      padding: 8px 0;
+      padding: 2px 0;
       scrollbar-width: none;
+      flex-shrink: 0;
     }
 
     .history-bar::-webkit-scrollbar {
@@ -120,9 +130,9 @@
 
     .history-pill {
       flex-shrink: 0;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.85rem;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
       font-weight: 700;
       font-family: monospace;
       background: var(--bg-card);
@@ -134,20 +144,25 @@
     .pill-mid { color: #c084fc; border-color: rgba(192, 132, 252, 0.4); }
     .pill-high { color: var(--gold); border-color: rgba(245, 158, 11, 0.5); }
 
-    /* Arena / Canvas Area */
+    /* Arena / Canvas Area compatto e dinamico */
     .arena-card {
       position: relative;
+      flex: 1 1 0;
+      min-height: 140px;
       background: radial-gradient(circle at bottom left, #1e1b4b 0%, #0f172a 70%);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
 
     canvas {
-      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
-      height: 340px;
+      height: 100%;
+      display: block;
     }
 
     /* Overlay Multiplier display */
@@ -158,31 +173,32 @@
       transform: translate(-50%, -50%);
       text-align: center;
       pointer-events: none;
+      width: 90%;
     }
 
     .multiplier-value {
-      font-size: 4.5rem;
+      font-size: 3.4rem;
       font-weight: 900;
       font-family: monospace;
-      letter-spacing: -2px;
+      letter-spacing: -1.5px;
       color: #fff;
-      text-shadow: 0 0 30px rgba(255,255,255,0.3);
+      text-shadow: 0 0 25px rgba(255,255,255,0.3);
       transition: color 0.2s;
     }
 
     .multiplier-value.crashed {
       color: var(--accent);
-      text-shadow: 0 0 40px var(--accent-glow);
+      text-shadow: 0 0 35px var(--accent-glow);
       animation: shake 0.4s ease;
     }
 
     .status-text {
-      font-size: 1.1rem;
+      font-size: 0.85rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
       color: var(--text-muted);
-      margin-top: -6px;
+      margin-top: -4px;
     }
 
     .status-text.crashed {
@@ -193,134 +209,116 @@
       color: var(--green);
     }
 
-    /* Control Panel */
+    /* Control Panel: 2 colonne per non rubare altezza */
     .control-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
+      border-radius: 12px;
+      padding: 10px;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 600px) {
-      .control-card {
-        grid-template-columns: 1fr;
-      }
-      .multiplier-value {
-        font-size: 3.5rem;
-      }
+      gap: 10px;
+      flex-shrink: 0;
     }
 
     .bet-config {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-    }
-
-    .label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      justify-content: space-between;
+      gap: 6px;
     }
 
     .input-row {
       display: flex;
-      gap: 8px;
-    }
-
-    .input-number {
-      flex: 1;
+      align-items: center;
+      gap: 6px;
       background: var(--bg-input);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 12px 14px;
+      padding: 4px 8px;
+    }
+
+    .input-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .input-number {
+      width: 100%;
+      background: transparent;
+      border: none;
       color: #fff;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-family: monospace;
       font-weight: 700;
       outline: none;
-    }
-
-    .input-number:focus {
-      border-color: #38bdf8;
+      text-align: right;
     }
 
     .quick-bets {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
+      gap: 4px;
     }
 
     .quick-btn {
       background: var(--bg-input);
       border: 1px solid var(--border);
       color: var(--text);
-      font-size: 0.85rem;
-      font-weight: 600;
-      padding: 8px 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 6px 0;
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.15s;
     }
 
-    .quick-btn:hover {
+    .quick-btn:active {
       background: var(--border);
-      border-color: #475569;
     }
 
     /* Big Action Button */
     .action-panel {
       display: flex;
       flex-direction: column;
-      justify-content: center;
     }
 
     .big-btn {
       width: 100%;
       height: 100%;
-      min-height: 80px;
-      border-radius: 12px;
+      min-height: 70px;
+      border-radius: 10px;
       border: none;
-      font-size: 1.4rem;
+      font-size: 1.25rem;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
       cursor: pointer;
       transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 2px;
     }
 
     .big-btn:active {
-      transform: scale(0.98);
+      transform: scale(0.97);
     }
 
     .big-btn-launch {
       background: linear-gradient(135deg, #2563eb, #1d4ed8);
       color: #fff;
-      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
-    }
-
-    .big-btn-launch:hover {
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
     }
 
     .big-btn-cashout {
       background: linear-gradient(135deg, #10b981, #059669);
       color: #fff;
-      box-shadow: 0 4px 25px var(--green-glow);
+      box-shadow: 0 4px 20px var(--green-glow);
       animation: pulse 1s infinite alternate;
-    }
-
-    .big-btn-cashout:hover {
-      background: linear-gradient(135deg, #34d399, #10b981);
     }
 
     .big-btn-disabled {
@@ -331,12 +329,12 @@
     }
 
     .btn-subtitle {
-      font-size: 0.95rem;
+      font-size: 0.8rem;
       font-weight: 600;
       opacity: 0.9;
     }
 
-    /* Keyframe Animations */
+    /* Keyframes */
     @keyframes pulse {
       0% { transform: scale(1); }
       100% { transform: scale(1.02); }
@@ -344,8 +342,8 @@
 
     @keyframes shake {
       0%, 100% { transform: translate(0, 0); }
-      20%, 60% { transform: translate(-6px, 3px); }
-      40%, 80% { transform: translate(6px, -3px); }
+      20%, 60% { transform: translate(-4px, 2px); }
+      40%, 80% { transform: translate(4px, -2px); }
     }
 
     @keyframes popIn {
@@ -357,7 +355,7 @@
 <body>
 
   <div class="container">
-    <!-- Top Header -->
+    <!-- Header: Titolo centrato e credito sotto -->
     <header>
       <div class="logo">
         🚀 <span>CRASH</span> GAME
@@ -369,7 +367,7 @@
       </div>
     </header>
 
-    <!-- Round History -->
+    <!-- History Bar -->
     <div class="history-bar" id="historyBar">
       <div class="history-pill pill-low">1.34x</div>
       <div class="history-pill pill-mid">2.45x</div>
@@ -378,8 +376,8 @@
       <div class="history-pill pill-mid">3.80x</div>
     </div>
 
-    <!-- Canvas Graphic Arena -->
-    <div class="arena-card">
+    <!-- Arena / Canvas Area dinamico -->
+    <div class="arena-card" id="arenaCard">
       <canvas id="gameCanvas"></canvas>
       <div class="multiplier-display">
         <div class="multiplier-value" id="multiplierText">1.00x</div>
@@ -387,11 +385,11 @@
       </div>
     </div>
 
-    <!-- Controls -->
+    <!-- Controlli: affiancati in 2 colonne compatte -->
     <div class="control-card">
       <div class="bet-config">
-        <label class="label" for="betInput">Puntata</label>
         <div class="input-row">
+          <span class="input-label">Puntata</span>
           <input type="number" id="betInput" class="input-number" value="20" min="1" step="1">
         </div>
         <div class="quick-bets">
@@ -412,12 +410,10 @@
   </div>
 
   <script>
-    // --- GESTIONE STATO & CREDITO ---
     const STORAGE_KEY = 'casino_balance';
     let balance = parseInt(localStorage.getItem(STORAGE_KEY)) || 1000;
     let currentBet = 20;
 
-    // Stati di gioco: 'IDLE' | 'STARTING' | 'FLYING' | 'CRASHED'
     let gameState = 'IDLE';
     let currentMultiplier = 1.00;
     let crashPoint = 1.00;
@@ -426,8 +422,8 @@
     let hasCashedOut = false;
     let wonAmount = 0;
 
-    // Riferimenti DOM
     const canvas = document.getElementById('gameCanvas');
+    const arenaCard = document.getElementById('arenaCard');
     const ctx = canvas.getContext('2d');
     const balanceDisplay = document.getElementById('balanceDisplay');
     const multiplierText = document.getElementById('multiplierText');
@@ -437,18 +433,18 @@
     const btnReload = document.getElementById('btnReload');
     const historyBar = document.getElementById('historyBar');
 
-    // Particelle per l'esplosione
     let particles = [];
 
-    // Ridimensionamento responsive Canvas
     function resizeCanvas() {
-      const rect = canvas.getBoundingClientRect();
+      const rect = arenaCard.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
       canvas.width = rect.width * window.devicePixelRatio;
       canvas.height = rect.height * window.devicePixelRatio;
+      ctx.resetTransform();
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      drawScene(0);
     }
     window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
 
     function updateBalanceUI() {
       balanceDisplay.textContent = balance;
@@ -463,19 +459,14 @@
       }
     }
 
-    // --- FORMULA RNG PROBABILISTICA (House Edge ~4%) ---
     function calculateCrashPoint() {
-      const houseEdge = 0.04; // 4% margine del banco
+      const houseEdge = 0.04;
       const r = Math.random();
-      // Probabilità di crash immediato
       if (r < houseEdge) return 1.00;
-      
       const result = (1 - houseEdge) / (1 - r);
-      // Arrotonda a due cifre decimali
       return Math.max(1.00, Math.floor(result * 100) / 100);
     }
 
-    // --- CONTROLLI PUNTATA ---
     betInput.addEventListener('input', () => {
       let val = parseInt(betInput.value) || 1;
       if (val < 1) val = 1;
@@ -509,7 +500,6 @@
       updateBalanceUI();
     });
 
-    // --- LOGICA DEL ROUND ---
     actionBtn.addEventListener('click', () => {
       if (gameState === 'IDLE') {
         startRound();
@@ -518,7 +508,6 @@
       }
     });
 
-    // Supporto per Barra Spaziatrice da tastiera
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
@@ -533,21 +522,17 @@
         return;
       }
 
-      // Detrae la puntata
       balance -= currentBet;
       updateBalanceUI();
 
-      // Setup round
       crashPoint = calculateCrashPoint();
       currentMultiplier = 1.00;
       hasCashedOut = false;
       particles = [];
       gameState = 'STARTING';
 
-      // Disabilita input puntata
       betInput.disabled = true;
 
-      // Breve conto alla rovescia (1.2s)
       let countdown = 3;
       statusText.className = "status-text";
       statusText.textContent = `In decollo... ${countdown}`;
@@ -562,7 +547,7 @@
           clearInterval(countInterval);
           launchFlight();
         }
-      }, 400);
+      }, 350);
     }
 
     function launchFlight() {
@@ -571,7 +556,6 @@
       statusText.textContent = "VOLO IN CORSO";
       multiplierText.className = "multiplier-value";
 
-      // Pulsante Incassa
       actionBtn.className = "big-btn big-btn-cashout";
       updateCashoutButton();
 
@@ -585,11 +569,10 @@
       updateBalanceUI();
 
       statusText.className = "status-text won";
-      statusText.textContent = `INCASSATO A ${currentMultiplier.toFixed(2)}x (+${wonAmount})`;
+      statusText.textContent = `INCASSATO ${currentMultiplier.toFixed(2)}x (+${wonAmount})`;
 
-      // Il pulsante diventa inattivo ma il razzo vola fino allo schianto effettivo
       actionBtn.className = "big-btn big-btn-disabled";
-      actionBtn.innerHTML = `<span>INCASSATO!</span><span class="btn-subtitle">+${wonAmount} crediti</span>`;
+      actionBtn.innerHTML = `<span>PRESO!</span><span class="btn-subtitle">+${wonAmount} crediti</span>`;
     }
 
     function updateCashoutButton() {
@@ -606,16 +589,12 @@
 
       if (!hasCashedOut) {
         statusText.className = "status-text crashed";
-        statusText.textContent = `CRASH! HAI PERSO ${currentBet}`;
+        statusText.textContent = `CRASH! PERSO -${currentBet}`;
       }
 
-      // Crea particelle di esplosione
       createExplosion();
-
-      // Aggiungi a cronologia
       addHistoryPill(crashPoint);
 
-      // Reset bottone
       actionBtn.className = "big-btn big-btn-launch";
       actionBtn.innerHTML = `<span>RIGIOCA</span><span class="btn-subtitle">Nuova puntata</span>`;
       betInput.disabled = false;
@@ -627,7 +606,7 @@
           statusText.textContent = "Pronto al decollo";
           updateActionBtnSubtitle();
         }
-      }, 1500);
+      }, 1400);
     }
 
     function addHistoryPill(multiplier) {
@@ -640,12 +619,10 @@
       }
     }
 
-    // --- GAME LOOP & GRAFICA CANVAS ---
     function gameLoop(timestamp) {
-      const elapsed = (timestamp - startTime) / 1000; // Secondi trascorsi
+      const elapsed = (timestamp - startTime) / 1000;
 
       if (gameState === 'FLYING') {
-        // Crescita esponenziale realistica: mult = e^(0.06 * t^1.2)
         currentMultiplier = Math.pow(Math.E, 0.07 * Math.pow(elapsed, 1.25));
         
         if (currentMultiplier >= crashPoint) {
@@ -665,65 +642,63 @@
     }
 
     function createExplosion() {
-      const w = canvas.getBoundingClientRect().width;
-      const h = canvas.getBoundingClientRect().height;
+      const w = arenaCard.clientWidth;
+      const h = arenaCard.clientHeight;
       
-      // Coordinate approssimative della punta della traiettoria
-      const x = Math.min(w * 0.85, 40 + Math.min(1, currentMultiplier / 8) * (w - 100));
-      const y = Math.max(40, (h - 40) - Math.min(1, Math.log10(currentMultiplier + 1)) * (h - 80));
+      const x = Math.min(w * 0.85, 30 + Math.min(1, currentMultiplier / 8) * (w - 70));
+      const y = Math.max(30, (h - 30) - Math.min(1, Math.log10(currentMultiplier + 1)) * (h - 60));
 
-      for (let i = 0; i < 45; i++) {
+      for (let i = 0; i < 35; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 2 + Math.random() * 6;
+        const speed = 2 + Math.random() * 5;
         particles.push({
           x: x,
           y: y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           life: 1.0,
-          decay: 0.02 + Math.random() * 0.03,
+          decay: 0.025 + Math.random() * 0.035,
           color: ['#ef4444', '#f97316', '#eab308', '#ffffff'][Math.floor(Math.random() * 4)],
-          size: 2 + Math.random() * 4
+          size: 2 + Math.random() * 3
         });
       }
     }
 
     function drawScene(elapsed) {
-      const w = canvas.getBoundingClientRect().width;
-      const h = canvas.getBoundingClientRect().height;
+      const w = arenaCard.clientWidth;
+      const h = arenaCard.clientHeight;
+      if (!w || !h) return;
 
       ctx.clearRect(0, 0, w, h);
 
-      // Griglia di sfondo elegante
+      // Griglia leggera
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
       ctx.lineWidth = 1;
-      for (let x = 0; x < w; x += 40) {
+      for (let x = 0; x < w; x += 35) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, h);
         ctx.stroke();
       }
-      for (let y = 0; y < h; y += 40) {
+      for (let y = 0; y < h; y += 35) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(w, y);
         ctx.stroke();
       }
 
-      const startX = 30;
-      const startY = h - 30;
+      const startX = 25;
+      const startY = h - 25;
 
       if (gameState === 'FLYING' || gameState === 'CRASHED') {
-        // Calcolo posizione attuale della testa
         const progress = Math.min(1, (currentMultiplier - 1) / 7);
-        const endX = startX + progress * (w - 90);
-        const endY = startY - Math.min(1, Math.pow(progress, 0.85)) * (h - 70);
+        const endX = startX + progress * (w - 65);
+        const endY = startY - Math.min(1, Math.pow(progress, 0.85)) * (h - 55);
 
-        // Control point per curva di Bezier
         const cpX = startX + (endX - startX) * 0.7;
         const cpY = startY;
 
-        // Area sfumata sotto la curva
+        // Area sfumata
         const grad = ctx.createLinearGradient(0, endY, 0, startY);
         if (gameState === 'CRASHED') {
           grad.addColorStop(0, 'rgba(225, 29, 72, 0.25)');
@@ -741,40 +716,37 @@
         ctx.closePath();
         ctx.fill();
 
-        // Linea curva principale
+        // Linea curva
         ctx.beginPath();
         ctx.moveTo(startX, startY);
         ctx.quadraticCurveTo(cpX, cpY, endX, endY);
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 3.5;
         ctx.strokeStyle = gameState === 'CRASHED' ? '#ef4444' : '#10b981';
         ctx.stroke();
 
-        // Razzo / Punto di testa se non è crashato
+        // Razzo
         if (gameState === 'FLYING') {
           ctx.save();
           ctx.translate(endX, endY);
-          // Calcola l'inclinazione tangente
           const angle = Math.atan2(endY - cpY, endX - cpX) * 0.5 - 0.2;
           ctx.rotate(angle);
 
-          // Disegna piccolo razzo stilizzato
           ctx.fillStyle = '#fff';
           ctx.beginPath();
-          ctx.arc(0, 0, 7, 0, Math.PI * 2);
+          ctx.arc(0, 0, 6, 0, Math.PI * 2);
           ctx.fill();
 
-          // Alone luminoso
           ctx.shadowColor = '#10b981';
-          ctx.shadowBlur = 15;
+          ctx.shadowBlur = 12;
           ctx.fillStyle = '#34d399';
           ctx.beginPath();
-          ctx.arc(0, 0, 4, 0, Math.PI * 2);
+          ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         }
       }
 
-      // Disegna particelle esplosione
+      // Particelle
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
@@ -795,9 +767,8 @@
       }
     }
 
-    // Inizializzazione iniziale UI
+    setTimeout(resizeCanvas, 50);
     updateBalanceUI();
-    drawScene(0);
   </script>
 </body>
 </html>
