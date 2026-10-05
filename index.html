@@ -130,6 +130,9 @@
 
     .history-pill {
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       padding: 3px 8px;
       border-radius: 12px;
       font-size: 0.75rem;
@@ -138,6 +141,24 @@
       background: var(--bg-card);
       border: 1px solid var(--border);
       animation: popIn 0.3s ease;
+    }
+
+    /* Pallino luminoso vittoria/sconfitta */
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-win {
+      background-color: var(--green);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    .dot-loss {
+      background-color: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
     }
 
     .pill-low { color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); }
@@ -209,7 +230,7 @@
       color: var(--green);
     }
 
-    /* Control Panel: 2 colonne per non rubare altezza */
+    /* Control Panel: 2 colonne */
     .control-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -369,11 +390,11 @@
 
     <!-- History Bar -->
     <div class="history-bar" id="historyBar">
-      <div class="history-pill pill-low">1.34x</div>
-      <div class="history-pill pill-mid">2.45x</div>
-      <div class="history-pill pill-high">11.20x</div>
-      <div class="history-pill pill-low">1.02x</div>
-      <div class="history-pill pill-mid">3.80x</div>
+      <div class="history-pill pill-mid"><span class="pill-dot dot-win"></span>2.45x</div>
+      <div class="history-pill pill-low"><span class="pill-dot dot-loss"></span>1.02x</div>
+      <div class="history-pill pill-high"><span class="pill-dot dot-win"></span>11.20x</div>
+      <div class="history-pill pill-low"><span class="pill-dot dot-loss"></span>1.34x</div>
+      <div class="history-pill pill-mid"><span class="pill-dot dot-win"></span>3.80x</div>
     </div>
 
     <!-- Arena / Canvas Area dinamico -->
@@ -596,7 +617,8 @@
       }
 
       createExplosion();
-      addHistoryPill(crashPoint);
+      // Salva nella cronologia con esito vittoria/sconfitta
+      addHistoryPill(crashPoint, hasCashedOut);
 
       actionBtn.className = "big-btn big-btn-launch";
       actionBtn.innerHTML = `<span>RIGIOCA</span><span class="btn-subtitle">Nuova puntata</span>`;
@@ -608,17 +630,25 @@
           statusText.className = "status-text";
           statusText.textContent = "Pronto al decollo";
           updateActionBtnSubtitle();
-          drawScene(0); // Ripulisce il tracciato rosso
+          drawScene(0);
         }
       }, 1400);
     }
 
-    function addHistoryPill(multiplier) {
+    function addHistoryPill(multiplier, won) {
       const pill = document.createElement('div');
       pill.className = 'history-pill ' + (multiplier >= 10 ? 'pill-high' : multiplier >= 2 ? 'pill-mid' : 'pill-low');
-      pill.textContent = `${multiplier.toFixed(2)}x`;
+      
+      const dot = document.createElement('span');
+      dot.className = 'pill-dot ' + (won ? 'dot-win' : 'dot-loss');
+      
+      const text = document.createTextNode(`${multiplier.toFixed(2)}x`);
+      
+      pill.appendChild(dot);
+      pill.appendChild(text);
+      
       historyBar.insertBefore(pill, historyBar.firstChild);
-      if (historyBar.children.length > 12) {
+      if (historyBar.children.length > 14) {
         historyBar.removeChild(historyBar.lastChild);
       }
     }
@@ -675,13 +705,13 @@
       const h = rect.height;
       if (!w || !h) return;
 
-      // Pulizia totale e garantita al 100% dell'intero buffer bitmap
+      // Pulizia totale buffer bitmap
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
 
-      // Griglia leggera
+      // Griglia
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
       ctx.lineWidth = 1;
       for (let x = 0; x < w; x += 35) {
@@ -756,7 +786,7 @@
         }
       }
 
-      // Particelle con rimozione se escono dai bordi
+      // Particelle
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
